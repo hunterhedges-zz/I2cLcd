@@ -1,0 +1,10 @@
+.DS_Store
+.metadata/*
+.jxbrowser-data/*
+RemoveSystemsTempFiles/*
+Debug/*
+Release/*
+.xdchelp
+config/*
+.launches/*
+/Debug/
