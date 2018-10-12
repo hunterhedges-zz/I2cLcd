@@ -57,6 +57,7 @@
  ******************************************************************************/
 /* DriverLib Includes */
 #include "driverlib.h"
+#include "I2CLCD.h"
 
 /* Standard Includes */
 #include <stdint.h>
@@ -66,103 +67,67 @@
 /* Slave Address for I2C Slave */
 #define SLAVE_ADDRESS 0x27
 
-/* Statics */
-static uint8_t TXData = 0;
-static uint8_t TXByteCtr;
-
 /* I2C Master Configuration Parameter */
 const eUSCI_I2C_MasterConfig i2cConfig =
 {
         EUSCI_B_I2C_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-        3000000,                                // SMCLK = 3MHz
+        48000000,                                // SMCLK = 3MHz
         EUSCI_B_I2C_SET_DATA_RATE_400KBPS,      // Desired I2C Clock of 400khz
         0,                                      // No byte counter threshold
         EUSCI_B_I2C_NO_AUTO_STOP                // No Autostop
 };
 
+static void configureClock(void);
+
 int main(void)
 {
-    volatile uint32_t ii;
-
     /* Disabling the Watchdog */
-    MAP_WDT_A_holdTimer();
+    WDT_A_holdTimer();
+
+    configureClock();
 
     /* Select Port 1 for I2C - Set Pin 6, 7 to input Primary Module Function,
      *   (UCB0SIMO/UCB0SDA, UCB0SOMI/UCB0SCL).
      */
-    MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P1,
+    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P1,
             GPIO_PIN6 + GPIO_PIN7, GPIO_PRIMARY_MODULE_FUNCTION);
 
     /* Initializing I2C Master to SMCLK at 400kbs with no autostop */
-    MAP_I2C_initMaster(EUSCI_B0_BASE, &i2cConfig);
+    I2C_initMaster(EUSCI_B0_BASE, &i2cConfig);
 
     /* Specify slave address */
-    MAP_I2C_setSlaveAddress(EUSCI_B0_BASE, SLAVE_ADDRESS);
+    I2C_setSlaveAddress(EUSCI_B0_BASE, SLAVE_ADDRESS);
 
     /* Set Master in transmit mode */
-    MAP_I2C_setMode(EUSCI_B0_BASE, EUSCI_B_I2C_TRANSMIT_MODE);
+    I2C_setMode(EUSCI_B0_BASE, EUSCI_B_I2C_TRANSMIT_MODE);
 
     /* Enable I2C Module to start operations */
-    MAP_I2C_enableModule(EUSCI_B0_BASE);
+    I2C_enableModule(EUSCI_B0_BASE);
 
-    /* Enable and clear the interrupt flag */
-    MAP_I2C_clearInterruptFlag(EUSCI_B0_BASE,
-            EUSCI_B_I2C_TRANSMIT_INTERRUPT0 + EUSCI_B_I2C_NAK_INTERRUPT);
+    LCD_init(SLAVE_ADDRESS);
 
-    /* Enable master transmit interrupt */
-    MAP_I2C_enableInterrupt(EUSCI_B0_BASE,
-            EUSCI_B_I2C_TRANSMIT_INTERRUPT0 + EUSCI_B_I2C_NAK_INTERRUPT);
-    MAP_Interrupt_enableInterrupt(INT_EUSCIB0);
+    write('H');
 
     while (1)
     {
-        /* Delay between Transmissions */
-        for (ii = 0; ii < 4000; ii++);
 
-        /* Load Byte Counter */
-        TXByteCtr = 4;
-        TXData = 0;
-
-        /* Making sure the last transaction has been completely sent out */
-        while (MAP_I2C_masterIsStopSent(EUSCI_B0_BASE) == EUSCI_B_I2C_SENDING_STOP);
-
-        /* Sending the initial start condition */
-        MAP_I2C_masterSendMultiByteStart(EUSCI_B0_BASE, TXData++);
-
-        MAP_Interrupt_enableSleepOnIsrExit();
-        MAP_PCM_gotoLPM0InterruptSafe();
     }
 }
 
-/*******************************************************************************
- * The USCIAB0TX_ISR is structured such that it can be used to transmit any
- * number of bytes by pre-loading TXByteCtr with the byte count. Also, TXData
- * points to the next byte to transmit.
- ******************************************************************************/
-void EUSCIB0_IRQHandler(void)
+static void configureClock(void)
 {
-    uint_fast16_t status;
+    /* Set Flash wait state for high clock frequency.  Refer to datasheet for
+    more details. */
+    FlashCtl_setWaitState(FLASH_BANK0, 2);
+    FlashCtl_setWaitState(FLASH_BANK1, 2);
 
-    status = MAP_I2C_getEnabledInterruptStatus(EUSCI_B0_BASE);
-    MAP_I2C_clearInterruptFlag(EUSCI_B0_BASE, status);
-
-    if (status & EUSCI_B_I2C_NAK_INTERRUPT)
-    {
-        MAP_I2C_masterSendStart(EUSCI_B0_BASE);
-    }
-
-    if (status & EUSCI_B_I2C_TRANSMIT_INTERRUPT0)
-    {
-        /* Check the byte counter */
-        if (TXByteCtr)
-        {
-            /* Send the next data and decrement the byte counter */
-            MAP_I2C_masterSendMultiByteNext(EUSCI_B0_BASE, TXData++);
-            TXByteCtr--;
-        } else
-        {
-            MAP_I2C_masterSendMultiByteStop(EUSCI_B0_BASE);
-            MAP_Interrupt_disableSleepOnIsrExit();
-        }
-    }
+    /* From the data sheet:  For AM_LDO_VCORE1 and AM_DCDC_VCORE1 modes, the maximum
+    CPU operating frequency is 48 MHz and maximum input clock frequency for
+    peripherals is 24 MHz. */
+    PCM_setCoreVoltageLevel(PCM_VCORE1);
+    CS_setDCOCenteredFrequency(CS_DCO_FREQUENCY_48);
+    CS_initClockSignal(CS_HSMCLK, CS_DCOCLK_SELECT, CS_CLOCK_DIVIDER_1);
+    CS_initClockSignal(CS_SMCLK, CS_DCOCLK_SELECT, CS_CLOCK_DIVIDER_1);
+    CS_initClockSignal(CS_MCLK, CS_DCOCLK_SELECT, CS_CLOCK_DIVIDER_1);
+    CS_initClockSignal(CS_ACLK, CS_REFOCLK_SELECT, CS_CLOCK_DIVIDER_1);
 }
