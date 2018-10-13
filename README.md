@@ -1,7 +1,7 @@
 # I2C LCD Library for MSP432
 
 Easily setup and control a 16x2 LCD screen using an I2C interface!
-![I2C LCD](https://raw.githubusercontent.com/hunterhedges/I2cLcd/master/pics/photo_2.jpg =363x272)
+<img src="https://raw.githubusercontent.com/hunterhedges/I2cLcd/master/pics/photo_2.jpg" width="363" height="272">
 
                                  5V   5V
                                  /|\  /|\
