@@ -13,7 +13,7 @@
  *
  *  With help from the many Arduino I2C libraries.
  *
- *
+ *                                5V   5V
  *                                /|\  /|\
  *                MSP432P401     ~10k ~10k     LCD with I2C
  *                  Master         |    |         slave
