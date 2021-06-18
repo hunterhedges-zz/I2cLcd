@@ -17,12 +17,13 @@
 #define RX_INTERRUPT            EUSCI_A_UART_RECEIVE_INTERRUPT
 #define TX_INTERRUPT            EUSCI_A_UART_TRANSMIT_INTERRUPT
 #define USB_UART_INT            INT_EUSCIA0
+#define USB_intHandler          EUSCIA0_IRQHandler
 
 /***************************
  * UART Configuration based on TI Tool:
  * http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
  ***************************/
-const eUSCI_UART_Config usbUARTConfig =
+const eUSCI_UART_ConfigV1 usbUARTConfig =
 {
     EUSCI_A_UART_CLOCKSOURCE_SMCLK,                 // SMCLK Clock Source
     19,                                             // BRDIV = 19

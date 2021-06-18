@@ -47,6 +47,8 @@ int main(void)
     // Add custom chars to CGRAM
     createCustomChars();
 
+    MAP_Interrupt_enableMaster();           /* enable processing all interrupts */
+
     while (1);
 }
 
@@ -89,7 +91,11 @@ void usbCallbackFxn(uint8_t charReceived)
     {
         USB_sendBuffer("\n", 1);
 
-        if(strcmp(rxBuffer, "HAPPY") == 0)
+        if (*rxBuffer < 'A' || 'Z' < *rxBuffer)
+        {
+            LCD_writeString ((uint8_t*)rxBuffer, rxPtr);
+        }
+        else if(strcmp(rxBuffer, "HAPPY") == 0)
         {
             LCD_writeChar(HAPPYFACE_ADDR);
         }
@@ -164,10 +170,6 @@ void usbCallbackFxn(uint8_t charReceived)
         else if(strcmp(rxBuffer, "BACKLIGHTOFF") == 0)
         {
             LCD_backlightOff();
-        }
-        else
-        {
-            LCD_writeString((uint8_t*)rxBuffer, rxPtr);
         }
 
         // Clear buffer
