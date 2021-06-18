@@ -171,6 +171,10 @@ void usbCallbackFxn(uint8_t charReceived)
         {
             LCD_backlightOff();
         }
+        else
+        {
+            LCD_writeString ((uint8_t*)rxBuffer, rxPtr);
+        }
 
         // Clear buffer
         memset(rxBuffer, 0, 32);
